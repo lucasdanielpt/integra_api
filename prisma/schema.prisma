@@ -1,0 +1,91 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  CLIENTE
+  ADMIN
+  PROFISSIONAL
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+  NOT_INFORMED
+}
+
+model User {
+  id                  String               @id @default(uuid()) @db.Uuid
+  email               String               @unique @db.VarChar(255)
+  passwordHash        String               @db.VarChar(255)
+  role                UserRole
+  isActive            Boolean              @default(true)
+  lastLoginAt         DateTime?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  patientProfile      PatientProfile?
+  professionalProfile ProfessionalProfile?
+  sessions            Session[]
+
+  @@map("users")
+}
+
+model PatientProfile {
+  id               String    @id @default(uuid()) @db.Uuid
+  userId           String    @unique @db.Uuid
+  fullName         String    @db.VarChar(255)
+  cpf              String    @unique @db.VarChar(14)
+  birthDate        DateTime
+  phone            String?   @db.VarChar(20)
+  gender           Gender    @default(NOT_INFORMED)
+  address          Json?
+  emergencyContact Json?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([fullName])
+  @@map("patient_profiles")
+}
+
+model ProfessionalProfile {
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String   @unique @db.Uuid
+  fullName      String   @db.VarChar(255)
+  councilType   String   @db.VarChar(20)
+  councilNumber String   @db.VarChar(50)
+  specialty     String   @db.VarChar(100)
+  phone         String?  @db.VarChar(20)
+  bio           String?  @db.Text
+  isAvailable   Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([councilType, councilNumber])
+  @@index([fullName])
+  @@index([specialty])
+  @@map("professional_profiles")
+}
+
+model Session {
+  id         String    @id @default(uuid()) @db.Uuid
+  userId     String    @db.Uuid
+  tokenHash  String    @db.VarChar(255)
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  deviceInfo Json?
+  ip         String?   @db.VarChar(64)
+  createdAt  DateTime  @default(now())
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("sessions")
+}
